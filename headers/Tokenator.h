@@ -21,7 +21,7 @@ struct Token {
         : type(type), value(value) {}
 };
 
-std::unique_ptr<Token> tokenize(std::string input);
+std::unique_ptr<Token> tokenize(const std::string& str);
 void printTokens(const Token* token);
 
 #endif //TOKENATOR_H
