@@ -7,4 +7,6 @@ add_executable(Expression main.cpp
         headers/Expression.h
         headers/Tokenator.h
         realization/Tokenator.cpp
-        headers/Parser.h)
+        headers/Parser.h
+        realization/Expression.cpp
+        realization/Parser.cpp)

@@ -15,11 +15,10 @@ enum TokenType {
 struct Token {
     TokenType type;
     std::string value;
-    std::unique_ptr<Token> next;
+    std::unique_ptr<Token> next = nullptr;
 
-    Token(TokenType type, std::string value) : type(type), value(value) {
-        next = nullptr;
-    }
+    Token(const TokenType type, const std::string& value) noexcept
+        : type(type), value(value) {}
 };
 
 std::unique_ptr<Token> tokenize(std::string input);
