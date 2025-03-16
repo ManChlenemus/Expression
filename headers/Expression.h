@@ -167,8 +167,8 @@ std::shared_ptr<Expression<T> > MonoExpression<T>::diff(std::string &str) {
                  std::make_shared<MonoExpression<T>>(MonoExpression<T>(expr, SIN))),
                  expr_diff, MULT);
         case LN:
-            return std::make_shared<BinaryExpression<T>>(std::make_shared<BinaryExpression<T>>
-                expr_diff, expr, DIV);
+            return std::make_shared<BinaryExpression<T>>(std::make_shared<BinaryExpression<T>>(
+                expr_diff, expr, DIV));
         case EXP:
             return std::make_shared<BinaryExpression<T>>(std::make_shared<BinaryExpression<T>>
                 (std::make_shared<MonoExpression<T>>((MonoExpression<T>(expr, EXP))),
