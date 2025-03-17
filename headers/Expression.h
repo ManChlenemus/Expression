@@ -105,12 +105,16 @@ public:
     std::string to_string() override {
         std::string tmp;
         switch (func) {
-            case COS: tmp = "cos"; break;
-            case SIN: tmp = "sin"; break;
-            case LN:  tmp = "ln";  break;
-            case EXP: tmp = "exp"; break;
+            case COS:
+                return "cos(" + expr->to_string() + ")";
+            case SIN:
+                return "sin(" + expr->to_string() + ")";
+            case LN:
+                return "ln(" + expr->to_string() + ")";
+            case EXP:
+                return "exp(" + expr->to_string() + ")";
+            default: return "Unknown function"; // не может быть
         }
-        return tmp + "(" + expr->to_string() + ")";
     }
 };
 
@@ -143,6 +147,7 @@ public:
             case MULT:
                 return left->eval(parameters) * right->eval(parameters);
             case DIV:
+                if (right->eval(parameters) == 0) throw "Division by zero";
                 return left->eval(parameters) / right->eval(parameters);
             case POW:
                 return std::pow(left->eval(parameters), right->eval(parameters));
@@ -150,8 +155,50 @@ public:
                 return -1;
         }
     }
-    std::shared_ptr<Expression<T>> diff(std::string &str) override;
-    std::string to_string() override;
+    std::shared_ptr<Expression<T>> diff(std::string &str) override {
+        auto left_diff = left->diff(str);
+        auto right_diff = right->diff(str);
+        switch (op) {
+            case PLUS:
+                return std::make_shared<BinaryExpression<T>>(left_diff, right_diff, PLUS);
+            case MINUS:
+                return std::make_shared<BinaryExpression<T>>(left_diff, right_diff, MINUS);
+            case MULT:
+                return std::make_shared<BinaryExpression<T>>(
+                    BinaryExpression<T>(left_diff, right, MULT),
+                    BinaryExpression<T>(left, right_diff, MULT), PLUS);
+            case DIV:
+                return std::make_shared<BinaryExpression<T>>(BinaryExpression<T>
+                    (BinaryExpression<T>(left_diff, right, MULT),
+                    BinaryExpression<T>(left, right_diff, MULT), MINUS),
+                    BinaryExpression<T>(right, ConstantExpression<T>(T(2)), POW), DIV);
+            case POW:
+                return std::make_shared<BinaryExpression>(
+                    std::make_shared<BinaryExpression<T>>(
+                        right_diff, std::make_shared<MonoExpression<T>>(MonoExpression<T>(left, LN)), MULT),
+                    std::make_shared<BinaryExpression<T>>(
+                        right, std::make_shared<BinaryExpression<T>>(
+                            left_diff, left, DIV), MULT), PLUS);
+            default: std::cout << "Unknown operation" << std::endl; // не может быть
+                return nullptr;
+        }
+    }
+    std::string to_string() override {
+        switch (op) {
+            case PLUS:
+                return left->to_string() + " + " + right->to_string();
+            case MINUS:
+                return left->to_string() + " - " + right->to_string();
+            case MULT:
+                return left->to_string() + " * " + right->to_string();
+            case DIV:
+                return left->to_string() + " / " + right->to_string();
+            case POW:
+                return left->to_string() + "^" + right->to_string();
+            default:
+                return "Unknown operation";
+        }
+    }
 };
 
 template<typename T>
