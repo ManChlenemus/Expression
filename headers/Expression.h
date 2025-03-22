@@ -52,7 +52,7 @@ template <typename T>
 class VarExpression: public Expression<T> {
     std::string value;
 public:
-    explicit VarExpression(std::string &value) : value(value) {}
+    explicit VarExpression(std::string &value) : value(value) {} //const
     ~VarExpression() override = default;
     VarExpression(const VarExpression<T> &other) = default;
     VarExpression(VarExpression<T> &&other) = default;
@@ -165,13 +165,13 @@ public:
                 return std::make_shared<BinaryExpression<T>>(left_diff, right_diff, MINUS);
             case MULT:
                 return std::make_shared<BinaryExpression<T>>(
-                    BinaryExpression<T>(left_diff, right, MULT),
-                    BinaryExpression<T>(left, right_diff, MULT), PLUS);
+                    std::make_shared<BinaryExpression<T>>(left_diff, right, MULT),
+                    std::make_shared<BinaryExpression<T>>(left, right_diff, MULT), PLUS);
             case DIV:
-                return std::make_shared<BinaryExpression<T>>(BinaryExpression<T>
-                    (BinaryExpression<T>(left_diff, right, MULT),
-                    BinaryExpression<T>(left, right_diff, MULT), MINUS),
-                    BinaryExpression<T>(right, ConstantExpression<T>(T(2)), POW), DIV);
+                return std::make_shared<BinaryExpression<T>>(std::make_shared<BinaryExpression<T>>
+                    (std::make_shared<BinaryExpression<T>>(left_diff, right, MULT),
+                    std::make_shared<BinaryExpression<T>>(left, right_diff, MULT), MINUS),
+                    std::make_shared<BinaryExpression<T>>(right, std::make_shared<ConstantExpression<T>>(T(2)), POW), DIV);
             case POW:
                 return std::make_shared<BinaryExpression>(
                     std::make_shared<BinaryExpression<T>>(
@@ -214,11 +214,11 @@ std::shared_ptr<Expression<T> > MonoExpression<T>::diff(std::string &str) {
                  std::make_shared<MonoExpression<T>>(MonoExpression<T>(expr, SIN))),
                  expr_diff, MULT);
         case LN:
-            return std::make_shared<BinaryExpression<T>>(std::make_shared<BinaryExpression<T>>(
+            return std::make_shared<BinaryExpression<T>>(BinaryExpression<T>(
                 expr_diff, expr, DIV));
         case EXP:
             return std::make_shared<BinaryExpression<T>>(std::make_shared<BinaryExpression<T>>
-                (std::make_shared<MonoExpression<T>>((MonoExpression<T>(expr, EXP))),
+                (std::make_shared<MonoExpression<T>>(MonoExpression<T>(expr, EXP)),
                 expr_diff, MULT));
         default: std::cout << "Unknown operation" << std::endl; // не может быть
             return nullptr;
