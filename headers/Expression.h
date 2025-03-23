@@ -49,9 +49,9 @@ public:
             double real = value.real();
             double imag = value.imag();
             if (imag >= 0) {
-                return std::to_string(real) + " + " + std::to_string(imag) + "i";
+                return "(" + std::to_string(real) + " + " + std::to_string(imag) + "i)";
             } else {
-                return std::to_string(real) + " - " + std::to_string(-imag) + "i";
+                return "(" + std::to_string(real) + " - " + std::to_string(-imag) + "i)";
             }
         } else {
             return std::to_string(value);
@@ -132,12 +132,6 @@ public:
     BinaryExpression(BinaryExpression<T> &&other) = default;
     BinaryExpression &operator=(const BinaryExpression<T> &other) = default;
     BinaryExpression &operator=(BinaryExpression<T> &&other) = default;
-
-    /*std::shared_ptr<Expression<T>> getLeft() { return left; }
-    std::shared_ptr<Expression<T>> getRight() { return right; }
-    void setLeft(std::shared_ptr<Expression<T>> left) { this->left = left; }
-    void setRight(std::shared_ptr<Expression<T>> right) { this->right = right; }
-    operation getOper() { return op; }*/
 
     T eval(std::map<std::string, T> &parameters) override {
         switch (op) {

@@ -2,47 +2,65 @@
 #include <complex>
 #include <map>
 #include <memory>
-#include "headers/Expression.h" // Подключаем ваш заголовочный файл
+#include <string>
+#include "headers/Expression.h"
+#include "headers/Tokenator.h"
+#include "headers/Parser.h"
 
-int main() {
-    // Используем std::complex<double> как тип T
-    using Complex = std::complex<double>;
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: differentiator --eval <expression> [variable=value ...]" << std::endl;
+        std::cerr << "       differentiator --diff <expression> --by <variable>" << std::endl;
+        return 1;
+    }
 
-    // Создаем переменные
-    std::string var_x = "x";
-    std::string var_y = "y";
+    std::string mode = argv[1];  // Режим работы (--eval или --diff)
+    std::string expression = argv[2];  // Выражение
 
-    // Создаем выражения
-    auto x = std::make_shared<VarExpression<Complex>>(var_x);
-    auto y = std::make_shared<VarExpression<Complex>>(var_y);
+    if (mode == "--eval") {
+        std::map<std::string, std::complex<double>> params;
 
-    // Создаем сложное выражение: x + y * (x - y)
-    auto expr = std::make_shared<BinaryExpression<Complex>>(
-        x,
-        std::make_shared<BinaryExpression<Complex>>(
-            y,
-            std::make_shared<BinaryExpression<Complex>>(x, y, MINUS),
-            MULT),
-        PLUS);
+        for (int i = 3; i < argc; i++) {
+            std::string arg = argv[i];
+            size_t eqPos = arg.find('=');
+            if (eqPos == std::string::npos) {
+                std::cerr << "Invalid argument: " << arg << std::endl;
+                return 1;
+            }
+            std::string var = arg.substr(0, eqPos);
 
-    // Создаем параметры для вычисления
-    std::map<std::string, Complex> parameters = {
-        {"x", Complex(3.0, 4.0)}, // x = 3 + 4i
-        {"y", Complex(1.0, -2.0)} // y = 1 - 2i
-    };
+            std::string val_expr = arg.substr(eqPos + 1);
+            auto val_tokens = tokenize(val_expr);
+            Parser<std::complex<double>> val_expr_parser(val_tokens);
+            auto expr = val_expr_parser.parse();
+            std::map<std::string, std::complex<double>> result;
+            std::complex<double> value = expr->eval(result);
 
-    // Вычисляем значение выражения
-    Complex result = expr->eval(parameters);
-    std::cout << "Expression: " << expr->to_string() << std::endl;
-    std::cout << "Result: " << result << std::endl;
+            params[var] = value;
+        }
 
-    // Дифференцируем выражение по x
-    auto diff_expr = expr->diff(var_x);
-    std::cout << "Derivative: " << diff_expr->to_string() << std::endl;
+        auto tokens = tokenize(expression);
+        Parser<std::complex<double>> parser(tokens);
+        auto expr = parser.parse();
+        std::cout << expr->eval(params) << std::endl;
 
-    // Вычисляем значение производной
-    Complex diff_result = diff_expr->eval(parameters);
-    std::cout << "Derivative Result: " << diff_result << std::endl;
+    } else if (mode == "--diff") {
+        if (argc < 5 || std::string(argv[3]) != "--by") {
+            std::cerr << "Usage: differentiator --diff <expression> --by <variable>" << std::endl;
+            return 1;
+        }
+
+        std::string diffVar = argv[4];  // Переменная, по которой дифференцируем
+        auto tokens = tokenize(expression);
+        Parser<std::complex<double>> parser(tokens);
+        auto expr = parser.parse();
+        auto diffExpr = expr->diff(diffVar);
+        std::cout << diffExpr->to_string() << std::endl;
+
+    } else {
+        std::cerr << "Unknown mode: " << mode << std::endl;
+        return 1;
+    }
 
     return 0;
 }

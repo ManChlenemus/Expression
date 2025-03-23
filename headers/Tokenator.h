@@ -1,27 +1,26 @@
 #ifndef TOKENATOR_H
 #define TOKENATOR_H
-#include <memory>
+#include <vector>
 #include <string>
 
 enum TokenType {
-    BEGIN,
-    OPERATOR,
-    NUMBER,
-    VARIABLE,
-    FUNCTION,
-    BRACKET
+    NUMBER,     // Число (действительная часть)
+    COMPLEX,    // Комплексное число (только мнимая часть)
+    VARIABLE,   // Переменная (1 буква)
+    OPERATOR,   // Оператор (+, -, *, /, ^)
+    FUNCTION,   // Функция (sin, cos, ln, exp)
+    LEFT_PAREN, // Левая скобка
+    RIGHT_PAREN // Правая скобка
 };
 
 struct Token {
     TokenType type;
     std::string value;
-    std::unique_ptr<Token> next = nullptr;
 
-    Token(const TokenType type, const std::string& value) noexcept
+    Token(const TokenType type, const std::string &value) noexcept
         : type(type), value(value) {}
 };
 
-std::unique_ptr<Token> tokenize(const std::string& str);
-void printTokens(const Token* token);
-
+std::vector<Token> tokenize(const std::string& str);
+void printTokens(std::vector<Token> &tokens);
 #endif //TOKENATOR_H

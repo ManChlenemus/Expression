@@ -9,58 +9,86 @@ std::string lower(const std::string& str) {
     return res;
 }
 
-std::unique_ptr<Token> tokenize(const std::string& str) {
-    const auto root = std::make_unique<Token>(BEGIN,"");
-    Token* curr = root.get();
-    size_t pos = 0;
-    while (pos < str.size()) {
-        // Исключения
-        while (pos < str.size() && isspace(str[pos])) pos++;
-        if (pos >= str.size()) break;
+std::vector<Token> tokenize(const std::string &input) {
+    std::vector<Token> tokens;
+    size_t i = 0;
 
-        // Основная часть
-        if (str[pos] == '(' || str[pos] == ')') {
-            std::string bracket = str[pos] == '(' ? "(" : ")";
-            curr->next = std::make_unique<Token>(BRACKET, bracket);
-            curr = curr->next.get();
-            pos++;
-        }
-        else if (str[pos] == '+' || str[pos] == '-' || str[pos] == '*'|| str[pos] == '/' || str[pos] == '^') {
-            std::string op; op += str[pos];
-            curr->next = std::make_unique<Token>(OPERATOR, op);
-            curr = curr->next.get();
-            pos++;
-        }
-        else if (isdigit(str[pos])) {
-            const size_t start = pos;
-            while (pos < str.size() && (isdigit(str[pos]) || str[pos] == '.')) pos++;
-            curr->next = std::make_unique<Token>(NUMBER, str.substr(start, pos - start));
-            curr = curr->next.get();
-        }
-        else if (isalpha(str[pos])) {
-            const size_t start = pos;
-            while (pos < str.size() && isalpha(str[pos])) pos++;
-            curr->next = make_unique<Token>(VARIABLE, str.substr(start, pos - start));
-            curr = curr->next.get();
+    while (i < input.size()) {
+        char c = input[i];
 
-            for (std::string fun : {"sin", "cos", "ln", "exp"}) {
-                if (fun == lower(curr->value)) {
-                    curr->type = FUNCTION;
-                    curr->value = lower(curr->value);
-                    break;
-                }
+        if (std::isspace(c)) {
+            i++;
+            continue;
+        }
+
+        if (isdigit(c) || c == '.') {
+            std::string numStr;
+            while (i < input.size() && (std::isdigit(input[i]) || input[i] == '.')) {
+                numStr += input[i];
+                i++;
             }
+            tokens.emplace_back(NUMBER, numStr);
+            continue;
         }
-        else std::cout << "error: unrecognized token type" << std::endl;
+
+        if (c == 'i') {
+            if (!tokens.empty() && tokens.back().type == NUMBER) {
+                tokens.back().type = COMPLEX;
+            } else {
+                if (!tokens.empty() && tokens.back().type == RIGHT_PAREN)
+                    tokens.emplace_back(OPERATOR, "*");
+                tokens.emplace_back(COMPLEX, "1");
+            }
+            i++;
+            continue;
+        }
+
+        if (std::isalpha(c)) {
+            std::string name;
+            while (i < input.size() && std::isalpha(input[i])) {
+                name += input[i];
+                i++;
+            }
+            name = lower(name);
+            if (name == "sin" || name == "cos" || name == "ln" || name == "exp") {
+                tokens.emplace_back(FUNCTION, name);
+            } else {
+                tokens.emplace_back(VARIABLE, name);
+            }
+            continue;
+        }
+
+        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^') {
+            tokens.emplace_back(OPERATOR, std::string(1, c));
+            i++;
+            continue;
+        }
+
+        if (c == '(') {
+            tokens.emplace_back(LEFT_PAREN, "(");
+            i++;
+            continue;
+        }
+        if (c == ')') {
+            tokens.emplace_back(RIGHT_PAREN, ")");
+            i++;
+            continue;
+        }
+        throw std::runtime_error("Unknown character: " + std::string(1, c));
     }
-    return std::move(root->next);
+    return tokens;
 }
 
-void printTokens(const Token* token) {
-    if (token != nullptr) {
-        std::cout << token->value << std::endl;
-        if (token->next != nullptr) {
-            printTokens(token->next.get());
+void printTokens(std::vector<Token> &tokens) {
+    for (const auto &token : tokens) {
+        switch (token.type) {
+            case NUMBER: std::cout << "NUMBER: " << token.value << std::endl; break;
+            case COMPLEX: std::cout << "COMPLEX: " << token.value << std::endl; break;
+            case FUNCTION: std::cout << "FUNCTION: " << token.value << std::endl; break;
+            case VARIABLE: std::cout << "VARIABLE: " << token.value << std::endl; break;
+            case OPERATOR: std::cout << "OPERATOR: " << token.value << std::endl; break;
+            case LEFT_PAREN: std::cout << "LEFT_P: (" << std::endl; break;
+            case RIGHT_PAREN: std::cout << "RIGHT_P: )" << std::endl; break;
         }
     }
 }
