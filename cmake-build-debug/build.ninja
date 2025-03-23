@@ -61,12 +61,6 @@ build CMakeFiles/Expression.dir/realization/Tokenator.cpp.obj: CXX_COMPILER__Exp
   OBJECT_DIR = CMakeFiles\Expression.dir
   OBJECT_FILE_DIR = CMakeFiles\Expression.dir\realization
 
-build CMakeFiles/Expression.dir/realization/Expression.cpp.obj: CXX_COMPILER__Expression_unscanned_Debug C$:/Users/ygu_i/CLionProjects/Expression/realization/Expression.cpp || cmake_object_order_depends_target_Expression
-  DEP_FILE = CMakeFiles\Expression.dir\realization\Expression.cpp.obj.d
-  FLAGS = -g -std=gnu++20 -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\Expression.dir
-  OBJECT_FILE_DIR = CMakeFiles\Expression.dir\realization
-
 
 # =============================================================================
 # Link build statements for EXECUTABLE target Expression
@@ -75,7 +69,7 @@ build CMakeFiles/Expression.dir/realization/Expression.cpp.obj: CXX_COMPILER__Ex
 #############################################
 # Link the executable Expression.exe
 
-build Expression.exe: CXX_EXECUTABLE_LINKER__Expression_Debug CMakeFiles/Expression.dir/main.cpp.obj CMakeFiles/Expression.dir/realization/Tokenator.cpp.obj CMakeFiles/Expression.dir/realization/Expression.cpp.obj
+build Expression.exe: CXX_EXECUTABLE_LINKER__Expression_Debug CMakeFiles/Expression.dir/main.cpp.obj CMakeFiles/Expression.dir/realization/Tokenator.cpp.obj
   FLAGS = -g
   LINK_LIBRARIES = -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\Expression.dir

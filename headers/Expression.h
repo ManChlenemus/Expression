@@ -14,7 +14,13 @@ enum Function { SIN, COS, LN, EXP };
 struct operators {
     Operation type; // тип
     int priority; // приоритет
-    explicit operators(Operation type); // конструктор
+    explicit operators(const Operation type): type(type) { // конструктор
+        switch (type) {
+            case PLUS: case MINUS: priority = 1; break;
+            case MULT: case DIV: priority = 2; break;
+            case POW: priority = 3;
+        }
+    }
 };
 
 template <typename T>
@@ -48,11 +54,15 @@ public:
             // Специальная обработка для комплексных чисел
             double real = value.real();
             double imag = value.imag();
-            if (imag >= 0) {
-                return "(" + std::to_string(real) + " + " + std::to_string(imag) + "i)";
-            } else {
+            if (real != 0 && imag != 0) {
+                if (imag >= 0) return "(" + std::to_string(real) + " + " + std::to_string(imag) + "i)";
                 return "(" + std::to_string(real) + " - " + std::to_string(-imag) + "i)";
             }
+            if (real == 0 && imag == 0) {
+                return std::to_string(0);
+            }
+            if (real == 0) return std::to_string(imag) + "i";
+            else return std::to_string(real);
         } else {
             return std::to_string(value);
         }
@@ -105,15 +115,8 @@ public:
         }
     }
     std::shared_ptr<Expression<T>> diff(std::string &str) override; // реализация ниже
-    std::string to_string() override {
-        switch (func) {
-            case SIN: return "sin(" + expr->to_string() + ")";
-            case COS: return "cos(" + expr->to_string() + ")";
-            case LN: return "ln(" + expr->to_string() + ")";
-            case EXP: return "exp(" + expr->to_string() + ")";
-            default: return "Unknown function";
-        }
-    }
+    std::string to_string() override ;
+    friend std::shared_ptr<Expression<T>> optimize<T> (std::shared_ptr<Expression<T>> expr);
 
 };
 
@@ -126,7 +129,11 @@ public:
     BinaryExpression(const std::shared_ptr<Expression<T>> &left,
                      const std::shared_ptr<Expression<T>> &right,
                      Operation op)
-        : left(left), right(right), op(op) {}
+        : left(left), right(right), op(op) {
+        /*if (auto right_ptr = dynamic_pointer_cast<ConstantExpression<T>>(T(0))) {
+            throw std::runtime_error("Division by zero");
+        }*/
+    }
     ~BinaryExpression() override = default;
     BinaryExpression(const BinaryExpression<T> &other) = default;
     BinaryExpression(BinaryExpression<T> &&other) = default;
@@ -188,7 +195,27 @@ public:
             default: return "Unknown operation";
         }
     }
+    friend std::shared_ptr<Expression<T>> optimize<T> (std::shared_ptr<Expression<T>> expr);
 };
+template<typename T>
+std::string MonoExpression<T>::to_string() {
+    if (auto binary = std::dynamic_pointer_cast<BinaryExpression<T>>(expr)) {
+        switch (func) {
+            case SIN: return "sin" + expr->to_string();
+            case COS: return "cos" + expr->to_string();
+            case LN: return "ln" + expr->to_string();
+            case EXP: return "exp" + expr->to_string();
+            default: return "Unknown function";
+        }
+    }
+    switch (func) {
+        case SIN: return "sin(" + expr->to_string() + ")";
+        case COS: return "cos(" + expr->to_string() + ")";
+        case LN: return "ln(" + expr->to_string() + ")";
+        case EXP: return "exp(" + expr->to_string() + ")";
+        default: return "Unknown function";
+    }
+}
 
 template<typename T>
 std::shared_ptr<Expression<T> > MonoExpression<T>::diff(std::string &str) {
@@ -213,6 +240,102 @@ std::shared_ptr<Expression<T> > MonoExpression<T>::diff(std::string &str) {
                 expr_diff, MULT);
         default: throw std::runtime_error("Unknown function");
     }
+}
+
+template <typename T>
+std::shared_ptr<Expression<T>> optimize (std::shared_ptr<Expression<T>> expr) {
+    if (auto mono = std::dynamic_pointer_cast<MonoExpression<T>>(expr)) {
+        mono->expr = optimize<T>(mono->expr);
+    }
+    if (auto binary = std::dynamic_pointer_cast<BinaryExpression<T>>(expr)) {
+        binary->left = optimize(binary->left);
+        binary->right = optimize(binary->right);
+        /*if (auto left_b = std::dynamic_pointer_cast<BinaryExpression<T>>(binary->left)) {
+            optimize(std::dynamic_pointer_cast<Expression<T>>(left_b));
+        }
+        if (auto right_b = std::dynamic_pointer_cast<BinaryExpression<T>>(binary->right)) {
+            optimize(std::dynamic_pointer_cast<Expression<T>>(right_b));
+        }*/
+        auto left = std::dynamic_pointer_cast<ConstantExpression<T>>(binary->left);
+        auto right = std::dynamic_pointer_cast<ConstantExpression<T>>(binary->right);
+        // Если сложение или вычитание нас интересуют нули
+        if (binary->op == PLUS || binary->op == MINUS) {
+            // Оба константы
+            if (left && right) {
+                std::map <std::string, T> map;
+                // Есть ноль
+                if (left->eval(map) == T(0) || right->eval(map) == T(0)) {
+                    expr = std::make_shared<ConstantExpression<T>>(T(expr->eval(map)));
+                }
+            // Если только левое выражение - константа
+            } else if (left) {
+                std::map <std::string, T> map;
+                // Если оно ноль
+                if (left->eval(map) == T(0)) {
+                    if (binary->op == MINUS) {
+                        binary->op = MULT;
+                        binary->left = std::make_shared<ConstantExpression<T>>(T(-1));
+                    } else {
+                        expr = binary->right;
+                    }
+                }
+            // Если только правое выражение - константа
+            } else if (right) {
+                std::map <std::string, T> map;
+                // Если оно ноль
+                if (right->eval(map) == T(0)) {
+                    expr = binary->left;
+                }
+            }
+        }
+        if (binary->op == MULT || binary->op == DIV) {
+            // Оба константы
+            if (left && right) {
+                std::map <std::string, T> map;
+                // Есть ноль
+                if (left->eval(map) == T(0) || right->eval(map) == T(0)) {
+                    if (binary->op == MULT) {
+                        expr = std::make_shared<ConstantExpression<T>>(T(0));
+                    } else if (binary->op == DIV) {
+                        if (right->eval(map) == T(0)) {
+                            throw std::runtime_error("Division by zero");
+                        } else if (left->eval(map) == T(0)) {
+                            expr = std::make_shared<ConstantExpression<T>>(T(0));
+                        }
+                    }
+                }
+                // Есть единица
+                if (left->eval(map) == T(1) || right->eval(map) == T(1)) {
+                    expr = std::make_shared<ConstantExpression<T>>(T(expr->eval(map)));
+                }
+            // Если только левое выражение - константа
+            } else if (left) {
+                std::map <std::string, T> map;
+                // Если оно единица
+                if (left->eval(map) == T(1)) {
+                    if (binary->op == MULT) {
+                        expr = binary->right;
+                    }
+                }
+                // Если - 0
+                if (left->eval(map) == T(0)) {
+                    expr = std::make_shared<ConstantExpression<T>>(T(0));
+                }
+                // Если только правое выражение - константа
+            } else if (right) {
+                std::map <std::string, T> map;
+                // Если оно единица
+                if (right->eval(map) == T(1)) {
+                    expr = binary->left;
+                }
+                // Если - 0
+                if (right->eval(map) == T(0)) {
+                    expr = std::make_shared<ConstantExpression<T>>(T(0));
+                }
+            }
+        } //
+    }
+    return expr;
 }
 
 #endif //EXPRESSION_H

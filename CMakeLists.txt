@@ -7,5 +7,4 @@ add_executable(Expression main.cpp
         headers/Expression.h
         headers/Tokenator.h
         realization/Tokenator.cpp
-        realization/Expression.cpp
 )

@@ -8,6 +8,17 @@
 #include "headers/Parser.h"
 
 int main(int argc, char* argv[]) {
+    /*std::map<std::string, std::complex<double>> params;
+    std::string par = "y";
+    std::string str = "y * sin(x + y)";
+    auto tokens = tokenize(str);
+    Parser<std::complex<double>> parser(tokens);
+    auto expr = parser.parse();
+    auto diffExpr = expr->diff(par);
+    diffExpr = optimize(diffExpr);
+    std::cout << diffExpr->to_string() << std::endl;*/
+
+
     if (argc < 2) {
         std::cerr << "Usage: differentiator --eval <expression> [variable=value ...]" << std::endl;
         std::cerr << "       differentiator --diff <expression> --by <variable>" << std::endl;
@@ -55,12 +66,12 @@ int main(int argc, char* argv[]) {
         Parser<std::complex<double>> parser(tokens);
         auto expr = parser.parse();
         auto diffExpr = expr->diff(diffVar);
+        optimize(diffExpr);
         std::cout << diffExpr->to_string() << std::endl;
 
     } else {
         std::cerr << "Unknown mode: " << mode << std::endl;
         return 1;
     }
-
     return 0;
 }
