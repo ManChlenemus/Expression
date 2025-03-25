@@ -3,9 +3,9 @@
 #include <map>
 #include <memory>
 #include <string>
-#include "headers/Expression.h"
-#include "headers/Tokenator.h"
-#include "headers/Parser.h"
+#include "Expression.h"
+#include "Tokenator.h"
+#include "Parser.h"
 
 int main(int argc, char* argv[]) {
     /*std::map<std::string, std::complex<double>> params;
@@ -24,7 +24,6 @@ int main(int argc, char* argv[]) {
         std::cerr << "       differentiator --diff <expression> --by <variable>" << std::endl;
         return 1;
     }
-
     std::string mode = argv[1];  // Режим работы (--eval или --diff)
     std::string expression = argv[2];  // Выражение
 
@@ -68,7 +67,6 @@ int main(int argc, char* argv[]) {
         auto diffExpr = expr->diff(diffVar);
         optimize(diffExpr);
         std::cout << diffExpr->to_string() << std::endl;
-
     } else {
         std::cerr << "Unknown mode: " << mode << std::endl;
         return 1;
