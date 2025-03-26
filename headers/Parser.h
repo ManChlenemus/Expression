@@ -92,7 +92,13 @@ class Parser {
         auto token = consume(); // работаем со след токеном
         switch (token.type) {
             case NUMBER: return std::make_shared<ConstantExpression<T> >(std::stod(token.value));
-            case COMPLEX: return std::make_shared<ConstantExpression<T> >(std::complex<double>(0, std::stod(token.value)));
+            case COMPLEX: {
+                if constexpr (std::is_same_v<T, std::complex<double>>) { // для нормального компила
+                    return std::make_shared<ConstantExpression<T> >(std::complex<double>(0, std::stod(token.value)));
+                } else {
+                    return std::make_shared<ConstantExpression<T> >(std::stod(token.value));
+                }
+            }
             case VARIABLE: return std::make_shared<VarExpression<T> >(token.value);
             case FUNCTION: {
                 auto arg = parsePrimary(); // тк ожидается скобка '(    '

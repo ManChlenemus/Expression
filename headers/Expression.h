@@ -23,6 +23,14 @@ struct operators {
     }
 };
 
+inline std::string to_string_optimized(double a) {
+    auto a_ = std::floor(a);
+    if (a == a_) {
+        return std::to_string(static_cast<long>(a_));
+    }
+    return std::to_string(a);
+}
+
 template <typename T>
 struct Expression {
     virtual ~Expression() = default;
@@ -55,16 +63,16 @@ public:
             double real = value.real();
             double imag = value.imag();
             if (real != 0 && imag != 0) {
-                if (imag >= 0) return "(" + std::to_string(real) + " + " + std::to_string(imag) + "i)";
-                return "(" + std::to_string(real) + " - " + std::to_string(-imag) + "i)";
+                if (imag >= 0) return "(" + to_string_optimized(real) + " + " + to_string_optimized(imag) + "i)";
+                return "(" + to_string_optimized(real) + " - " + to_string_optimized(-imag) + "i)";
             }
             if (real == 0 && imag == 0) {
-                return std::to_string(0);
+                return to_string_optimized(0);
             }
-            if (real == 0) return std::to_string(imag) + "i";
-            else return std::to_string(real);
+            if (real == 0) return to_string_optimized(imag) + "i";
+            else return to_string_optimized(real);
         } else {
-            return std::to_string(value);
+            return to_string_optimized(value);
         }
     }
 };
@@ -176,11 +184,48 @@ public:
                 return std::make_shared<BinaryExpression<T>>(numerator, denominator, DIV);
             }
             case POW: {
-                auto term1 = std::make_shared<BinaryExpression<T>>(
-                    right_diff, std::make_shared<MonoExpression<T>>(left, LN), MULT);
-                auto term2 = std::make_shared<BinaryExpression<T>>(
-                    right, std::make_shared<BinaryExpression<T>>(left_diff, left, DIV), MULT);
-                return std::make_shared<BinaryExpression<T>>(term1, term2, PLUS);
+
+                if constexpr (!std::is_same_v<T, std::complex<double>>) {
+                    std::map<std::string, T> map;
+                    // f(x) ^ const
+                    if (auto right_const = std::dynamic_pointer_cast<ConstantExpression<T>>(right)) {
+                        if (right_const->eval(map) > T(1)) {
+                            auto power = std::make_shared<ConstantExpression<T>>(right_const->eval(map) - T(1));
+                            auto multiplier = std::make_shared<BinaryExpression<T>>(left, power, POW);
+                            return std::make_shared<BinaryExpression<T>>(
+                                right,
+                                std::make_shared<BinaryExpression<T>>(
+                                    multiplier , left_diff, MULT),
+                                MULT);
+                        }
+                        if (right_const->eval(map) == 1)
+                            return std::make_shared<ConstantExpression<T>>(T(1));
+
+                        auto multiplier = std::make_shared<BinaryExpression<T>>(right, left_diff, MULT);
+                        auto power = std::make_shared<ConstantExpression<T>>(T(std::abs(right_const->eval(map)) + T(1)));
+                        return std::make_shared<BinaryExpression<T>>(multiplier,
+                            std::make_shared<BinaryExpression<T>>(left, power, POW), DIV);
+                    }
+                    // const ^ f(x)
+                    if (auto left_const = std::dynamic_pointer_cast<ConstantExpression<T>>(left)) {
+                        auto multiplier1 = std::make_shared<BinaryExpression<T>>(left, right, POW);
+                        auto multiplier2 = std::make_shared<MonoExpression<T>>(left, LN);
+                        return std::make_shared<BinaryExpression<T>>(
+                            right_diff,
+                            std::make_shared<BinaryExpression<T>>(
+                                multiplier1,
+                                multiplier2, MULT),
+                            MULT);
+                    }
+
+                    // f(x) ^ g(x)
+                    auto term1 = std::make_shared<BinaryExpression<T>>(
+                        right_diff, std::make_shared<MonoExpression<T>>(left, LN), MULT);
+                    auto term2 = std::make_shared<BinaryExpression<T>>(
+                        right, std::make_shared<BinaryExpression<T>>(left_diff, left, DIV), MULT);
+                    return std::make_shared<BinaryExpression<T>>(term1, term2, PLUS);
+                }
+
             }
             default: throw std::runtime_error("Unknown operation");
         }
@@ -245,7 +290,7 @@ std::shared_ptr<Expression<T> > MonoExpression<T>::diff(std::string &str) {
 template <typename T>
 std::shared_ptr<Expression<T>> optimize (std::shared_ptr<Expression<T>> expr) {
     if (auto mono = std::dynamic_pointer_cast<MonoExpression<T>>(expr)) {
-        mono->expr = optimize<T>(mono->expr);
+        mono->expr = optimize(mono->expr);
     }
     if (auto binary = std::dynamic_pointer_cast<BinaryExpression<T>>(expr)) {
         binary->left = optimize(binary->left);

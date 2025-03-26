@@ -59,6 +59,11 @@ std::vector<Token> tokenize(const std::string &input) {
         }
 
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^') {
+            if (c == '-') {
+                if (!tokens.empty() && tokens.back().type == LEFT_PAREN) {
+                    tokens.emplace_back(NUMBER, "0");
+                }
+            }
             tokens.emplace_back(OPERATOR, std::string(1, c));
             i++;
             continue;
