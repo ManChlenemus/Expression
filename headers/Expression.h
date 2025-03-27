@@ -71,7 +71,8 @@ public:
             }
             if (real == 0) return to_string_optimized(imag) + "i";
             else return to_string_optimized(real);
-        } else {
+        } else if (std::is_same_v<T, double>) {
+            if (value < 0.0f) return "(" + to_string_optimized(value) + ")";
             return to_string_optimized(value);
         }
     }

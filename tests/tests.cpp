@@ -1,9 +1,7 @@
-#define CATCH_CONFIG_MAIN
-#include "../library/catch_amalgamated.hpp"
-
+#include <catch2/catch_test_macros.hpp>
 #include "Expression.h"
 #include "Tokenator.h"
-#include <Parser.h>
+#include "Parser.h"
 
 bool diff_double(const std::string &input, const std::string &expected, std::string by) {
     auto tokens = tokenize(input);
@@ -40,10 +38,10 @@ TEST_CASE("Дифференцирование") {
         CHECK(diff_double("ln(x^2 + 1)", "((2 * (x^1)) / ((x^2) + 1))", "x"));
         CHECK(diff_double("x^x", "(ln(x) + (x * (1 / x)))", "x"));
         CHECK(diff_double("sin(x^2)", "(cos(x^2) * (2 * (x^1)))", "x"));
-        CHECK(diff_double("cos(ln(x))", "((-1 * sin(ln(x))) * (1 / x))", "x"));
+        CHECK(diff_double("cos(ln(x))", "(((-1) * sin(ln(x))) * (1 / x))", "x"));
         CHECK(diff_double("exp(x) * sin(x)", "((exp(x) * sin(x)) + (exp(x) * cos(x)))", "x"));
         CHECK(diff_double("ln(x) / x^3", "((((1 / x) * (x^3)) - (ln(x) * (3 * (x^2)))) / ((x^3)^2))", "x"));
-        CHECK(diff_double("sin(x) * cos(x)", "((cos(x) * cos(x)) + (sin(x) * (-1 * sin(x))))", "x"));
+        CHECK(diff_double("sin(x) * cos(x)", "((cos(x) * cos(x)) + (sin(x) * ((-1) * sin(x))))", "x"));
     }
     SECTION("COMPLEX") {
         CHECK(diff_complex("(3+2i)*x + (1-4i)", "(3 + 2i)", "x"));
@@ -119,5 +117,78 @@ TEST_CASE("Подсчет") {
               {{"a", to_cm(1, 1)}, {"b", to_cm(2, -1)}, {"c", to_cm(3, 4)}, {"d", to_cm(1, 2)}, {"e", to_cm(2, 0)}}));
         CHECK(eval_complex("ln(-1)", to_cm(0, M_PI), {{"x", to_cm(-1, 0)}})); // Комплексный логарифм
         CHECK(eval_complex("(x + y) ^ (a - b)", std::pow(to_cm(2, 3), to_cm(1, -1)), {{"x", to_cm(1, 1)}, {"y", to_cm(1, 2)}, {"a", to_cm(2, 0)}, {"b", to_cm(1, 1)}}));
+    }
+}
+
+bool scan_double(const std::string& input, const std::string& expected) {
+    auto tokens = tokenize(input);
+    Parser<double> parser(tokens);
+    auto expr = parser.parse();
+    std::cout  << input << " = " << expr->to_string() << " || " << expected << " (expected)"<< std::endl;
+    return expr->to_string() == expected;
+}
+
+bool scan_complex(const std::string& input, const std::string& expected) {
+    auto tokens = tokenize(input);
+    Parser<std::complex<double>> parser(tokens);
+    auto expr = parser.parse();
+    std::cout  << input << " = " << expr->to_string() << " || " << expected << " (expected)"<< std::endl;
+    return expr->to_string() == expected;
+}
+
+TEST_CASE("Распознание") {
+    SECTION("DOUBLE") {
+        CHECK(scan_double("x", "x"));
+        CHECK(scan_double("y", "y"));
+        CHECK(scan_double("variable", "variable"));
+
+        CHECK(scan_double("x + y", "(x + y)"));
+        CHECK(scan_double("a - b", "(a - b)"));
+        CHECK(scan_double("x * y", "(x * y)"));
+        CHECK(scan_double("a / b", "(a / b)"));
+        CHECK(scan_double("x ^ y", "(x^y)"));
+
+        CHECK(scan_double("sin(x)", "sin(x)"));
+        CHECK(scan_double("cos(y)", "cos(y)"));
+        CHECK(scan_double("ln(z)", "ln(z)"));
+        CHECK(scan_double("exp(w)", "exp(w)"));
+
+        CHECK(scan_double("sin(x) + cos(y)", "(sin(x) + cos(y))"));
+        CHECK(scan_double("ln(a) * exp(b)", "(ln(a) * exp(b))"));
+        CHECK(scan_double("(x + y) * (a - b)", "((x + y) * (a - b))"));
+        CHECK(scan_double("sin(x ^ y)", "sin(x^y)"));
+
+        CHECK(scan_double("sin(x) + cos(y) * ln(z)", "(sin(x) + (cos(y) * ln(z)))"));
+        CHECK(scan_double("exp(a) - b * c / d", "(exp(a) - ((b * c) / d))"));
+        CHECK(scan_double("x ^ y ^ z", "((x^y)^z)"));
+        CHECK(scan_double("sin(cos(ln(exp(x))))", "sin(cos(ln(exp(x))))"));
+
+        CHECK(scan_double("  x  ", "x"));
+        CHECK(scan_double("x   +   y", "(x + y)"));
+        CHECK(scan_double("  sin(  x  )  ", "sin(x)"));
+        CHECK(scan_double("\tx\t^\ty\t", "(x^y)"));
+    }
+    SECTION("COMPLEX") {
+        CHECK(scan_complex("x", "x"));
+        CHECK(scan_complex("bober", "bober"));
+
+        CHECK(scan_complex("3", "3"));
+        CHECK(scan_complex("2.5", "2.500000"));
+        CHECK(scan_complex("0.123456789", "0.123457")); // округление
+
+        CHECK(scan_complex("3 + 4i", "(3 + 4i)"));
+        CHECK(scan_complex("2.5 - 1.7i", "(2.500000 - 1.700000i)"));
+        CHECK(scan_complex("1 + i", "(1 + 1i)"));
+        CHECK(scan_complex("3i", "3i"));
+
+        CHECK(scan_complex("a + b", "(a + b)"));
+        CHECK(scan_complex("2.1 + 3.5i", "(2.100000 + 3.500000i)"));
+        CHECK(scan_complex("x * y - z", "((x * y) - z)"));
+        CHECK(scan_complex("a / b ^ c", "(a / (b^c))"));
+
+        CHECK(scan_complex("sin(2.3)", "sin(2.300000)"));
+        CHECK(scan_complex("cos(1 + 2i)", "cos(1 + 2i)"));
+        CHECK(scan_complex("exp(a * b)", "exp(a * b)"));
+        CHECK(scan_complex("(1.2 + sin(3.4)) * i", "((1.200000 + sin(3.400000)) * 1i)"));
     }
 }

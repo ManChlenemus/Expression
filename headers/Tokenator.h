@@ -10,7 +10,8 @@ enum TokenType {
     OPERATOR,   // Оператор (+, -, *, /, ^)
     FUNCTION,   // Функция (sin, cos, ln, exp)
     LEFT_PAREN, // Левая скобка
-    RIGHT_PAREN // Правая скобка
+    RIGHT_PAREN, // Правая скобка
+    START // для унарного минуса
 };
 
 struct Token {

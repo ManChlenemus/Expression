@@ -1,4 +1,4 @@
-#include "../headers/Tokenator.h"
+#include "Tokenator.h"
 #include <iostream>
 
 std::string lower(const std::string& str) {
@@ -9,7 +9,8 @@ std::string lower(const std::string& str) {
     return res;
 }
 
-std::vector<Token> tokenize(const std::string &input) {
+std::vector<Token> tokenize(const std::string &input_) {
+    auto input = '#' + input_;
     std::vector<Token> tokens;
     size_t i = 0;
 
@@ -20,7 +21,11 @@ std::vector<Token> tokenize(const std::string &input) {
             i++;
             continue;
         }
-
+        if (c == '#') {
+            tokens.emplace_back(START, "#");
+            i++;
+            continue;
+        }
         if (isdigit(c) || c == '.') {
             std::string numStr;
             while (i < input.size() && (std::isdigit(input[i]) || input[i] == '.')) {
@@ -60,7 +65,7 @@ std::vector<Token> tokenize(const std::string &input) {
 
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^') {
             if (c == '-') {
-                if (!tokens.empty() && tokens.back().type == LEFT_PAREN) {
+                if (!tokens.empty() && (tokens.back().type == LEFT_PAREN || tokens.back().type == START)) {
                     tokens.emplace_back(NUMBER, "0");
                 }
             }
@@ -81,6 +86,7 @@ std::vector<Token> tokenize(const std::string &input) {
         }
         throw std::runtime_error("Unknown character: " + std::string(1, c));
     }
+    tokens.erase(tokens.begin());
     return tokens;
 }
 
@@ -94,6 +100,7 @@ void printTokens(std::vector<Token> &tokens) {
             case OPERATOR: std::cout << "OPERATOR: " << token.value << std::endl; break;
             case LEFT_PAREN: std::cout << "LEFT_P: (" << std::endl; break;
             case RIGHT_PAREN: std::cout << "RIGHT_P: )" << std::endl; break;
+            case START: std::cout << "START: " << token.value << std::endl; break; // добавкой
         }
     }
 }

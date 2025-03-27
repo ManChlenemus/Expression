@@ -2,26 +2,31 @@ cmake_minimum_required(VERSION 3.20)
 project(Expression)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_EXE_LINKER_FLAGS "-static")
-add_executable(differentiator
-        main.cpp
-        realization/Tokenator.cpp
+
+include_directories(headers)
+add_library(TokenLib STATIC realization/Tokenator.cpp)
+target_include_directories(TokenLib PUBLIC headers)
+
+# Подключение тестов
+Include(FetchContent)
+
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.8.0
 )
 
-target_include_directories(differentiator PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/headers
-)
+FetchContent_MakeAvailable(Catch2)
 
-add_executable(tests
-        tests/tests.cpp
-        realization/Tokenator.cpp
-        library/catch_amalgamated.cpp
-)
+# Считыватель с консоли
+add_executable(differentiator main.cpp)
+target_link_libraries(differentiator PRIVATE TokenLib)
+target_include_directories(differentiator PUBLIC headers)
 
-target_include_directories(tests PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/headers
-        ${CMAKE_CURRENT_SOURCE_DIR}/library
-)
+# Сами тесты
+add_executable(tests_ tests/tests.cpp)
+target_link_libraries(tests_ PRIVATE TokenLib Catch2::Catch2WithMain)
+target_include_directories(tests_ PUBLIC headers)
 
 enable_testing()
-add_test(NAME ExpressionTests COMMAND tests)
+add_test(NAME ExpressionTests COMMAND tests_)
